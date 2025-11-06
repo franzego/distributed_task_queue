@@ -8,6 +8,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ApiKey struct {
+	ID         string             `json:"id"`
+	Name       string             `json:"name"`
+	KeyHash    string             `json:"key_hash"`
+	CreatedBy  pgtype.Text        `json:"created_by"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
+	LastUsedAt pgtype.Timestamptz `json:"last_used_at"`
+	IsActive   bool               `json:"is_active"`
+}
+
 type Job struct {
 	ID           string             `json:"id"`
 	Type         string             `json:"type"`

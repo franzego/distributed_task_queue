@@ -10,6 +10,8 @@ type Queue interface {
 	Enqueue(ctx context.Context, job db.Job) error
 	Dequeue(ctx context.Context) (*db.Job, error)
 	GetJob(ctx context.Context, id string) (db.Job, error)
+	CreateAPIKey(ctx context.Context, arg db.CreateAPIKeyParams) (db.ApiKey, error)
+	ListAPIKeys(ctx context.Context) ([]db.ApiKey, error)
 }
 
 type Service struct {
@@ -54,4 +56,18 @@ func (s *Service) GetJob(ctx context.Context, id string) (db.Job, error) {
 		return db.Job{}, err
 	}
 	return job, nil
+}
+func (s *Service) CreateAPIKey(ctx context.Context, arg db.CreateAPIKeyParams) (db.ApiKey, error) {
+	key, err := s.r.CreateAPIKey(ctx, arg)
+	if err != nil {
+		return db.ApiKey{}, err
+	}
+	return key, nil
+}
+func (s *Service) ListAPIKeys(ctx context.Context) ([]db.ApiKey, error) {
+	keys, err := s.r.ListAPIKeys(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return keys, nil
 }

@@ -36,6 +36,40 @@ func (q *Queries) CountJobsByStatus(ctx context.Context, status string) (int64, 
 	return count, err
 }
 
+const createAPIKey = `-- name: CreateAPIKey :one
+INSERT INTO api_keys (id, name, key_hash, created_by)
+VALUES ($1, $2, $3, $4)
+RETURNING id, name, key_hash, created_by, created_at, expires_at, last_used_at, is_active
+`
+
+type CreateAPIKeyParams struct {
+	ID        string      `json:"id"`
+	Name      string      `json:"name"`
+	KeyHash   string      `json:"key_hash"`
+	CreatedBy pgtype.Text `json:"created_by"`
+}
+
+func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (ApiKey, error) {
+	row := q.db.QueryRow(ctx, createAPIKey,
+		arg.ID,
+		arg.Name,
+		arg.KeyHash,
+		arg.CreatedBy,
+	)
+	var i ApiKey
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.KeyHash,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.LastUsedAt,
+		&i.IsActive,
+	)
+	return i, err
+}
+
 const createJob = `-- name: CreateJob :one
 INSERT INTO jobs (
     id,
@@ -79,6 +113,17 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const deactivateAPIKey = `-- name: DeactivateAPIKey :exec
+UPDATE api_keys
+SET is_active = false
+WHERE id = $1
+`
+
+func (q *Queries) DeactivateAPIKey(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, deactivateAPIKey, id)
+	return err
 }
 
 const dequeueJob = `-- name: DequeueJob :one
@@ -146,6 +191,27 @@ func (q *Queries) FailJob(ctx context.Context, arg FailJobParams) error {
 	return err
 }
 
+const getAPIKeyByHash = `-- name: GetAPIKeyByHash :one
+SELECT id, name, key_hash, created_by, created_at, expires_at, last_used_at, is_active FROM api_keys
+WHERE key_hash = $1 AND is_active = true
+`
+
+func (q *Queries) GetAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, error) {
+	row := q.db.QueryRow(ctx, getAPIKeyByHash, keyHash)
+	var i ApiKey
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.KeyHash,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.LastUsedAt,
+		&i.IsActive,
+	)
+	return i, err
+}
+
 const getJob = `-- name: GetJob :one
 SELECT id, type, payload, status, attempts, max_attempts, error_message, scheduled_at, created_at, updated_at FROM jobs
 WHERE id = $1
@@ -167,6 +233,40 @@ func (q *Queries) GetJob(ctx context.Context, id string) (Job, error) {
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listAPIKeys = `-- name: ListAPIKeys :many
+SELECT id, name, key_hash, created_by, created_at, expires_at, last_used_at, is_active FROM api_keys
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListAPIKeys(ctx context.Context) ([]ApiKey, error) {
+	rows, err := q.db.Query(ctx, listAPIKeys)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ApiKey{}
+	for rows.Next() {
+		var i ApiKey
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.KeyHash,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.ExpiresAt,
+			&i.LastUsedAt,
+			&i.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listJobs = `-- name: ListJobs :many
@@ -211,4 +311,15 @@ func (q *Queries) ListJobs(ctx context.Context, arg ListJobsParams) ([]Job, erro
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateLastUsed = `-- name: UpdateLastUsed :exec
+UPDATE api_keys
+SET last_used_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) UpdateLastUsed(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, updateLastUsed, id)
+	return err
 }

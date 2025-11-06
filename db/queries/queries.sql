@@ -56,3 +56,26 @@ LIMIT $2 OFFSET $3;
 -- name: CountJobsByStatus :one
 SELECT COUNT(*) FROM jobs
 WHERE status = $1;
+
+-- name: CreateAPIKey :one
+INSERT INTO api_keys (id, name, key_hash, created_by)
+VALUES ($1, $2, $3, $4)
+RETURNING *;
+
+-- name: GetAPIKeyByHash :one
+SELECT * FROM api_keys
+WHERE key_hash = $1 AND is_active = true;
+
+-- name: ListAPIKeys :many
+SELECT * FROM api_keys
+ORDER BY created_at DESC;
+
+-- name: UpdateLastUsed :exec
+UPDATE api_keys
+SET last_used_at = NOW()
+WHERE id = $1;
+
+-- name: DeactivateAPIKey :exec
+UPDATE api_keys
+SET is_active = false
+WHERE id = $1;

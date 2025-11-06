@@ -50,3 +50,15 @@ func (r *Repository) FailJob(ctx context.Context, arg db.FailJobParams) error {
 func (r *Repository) CompletedJob(ctx context.Context, id string) error {
 	return r.q.CompleteJob(ctx, id)
 }
+func (r *Repository) GetAPIKeyByHash(ctx context.Context, keyHash string) (db.ApiKey, error) {
+	return r.q.GetAPIKeyByHash(ctx, keyHash)
+}
+func (r *Repository) UpdateLastUsed(ctx context.Context, id string) error {
+	return r.q.UpdateLastUsed(ctx, id)
+}
+func (r *Repository) CreateAPIKey(ctx context.Context, arg db.CreateAPIKeyParams) (db.ApiKey, error) {
+	return r.q.CreateAPIKey(ctx, arg)
+}
+func (r *Repository) ListAPIKeys(ctx context.Context) ([]db.ApiKey, error) {
+	return r.q.ListAPIKeys(ctx)
+}

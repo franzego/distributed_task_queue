@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/franzego/distributed_task_queue/authutil"
 	db "github.com/franzego/distributed_task_queue/db/sqlc"
 	"github.com/franzego/distributed_task_queue/models"
 	"github.com/gin-gonic/gin"
@@ -83,5 +84,65 @@ func (h *Handler) GetStatus(c *gin.Context) {
 	// 	return
 	// }
 	c.JSON(http.StatusOK, job)
+
+}
+
+// Post Request For Admin to create Api Keys
+func (h *Handler) PostAdminApiKey(c *gin.Context) {
+	var req struct {
+		Name        string `json:"name"` //name of the api key
+		Description string `json:"description"`
+		Prefix      string `json:"prefix"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Message: "Invalid Request",
+			Error:   err.Error(),
+		})
+		return
+	}
+	key, err := authutil.KeyGenerator(req.Prefix)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Failed to generate Api key",
+		})
+		return
+	}
+	hashKey := authutil.HashApiKeys(key)
+
+	newKey, err := h.q.CreateAPIKey(c.Request.Context(), db.CreateAPIKeyParams{
+		ID:      uuid.New().String(),
+		Name:    req.Name,
+		KeyHash: hashKey,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Failed to create Api key",
+		})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{
+		"id":         newKey.ID,
+		"name":       newKey.Name,
+		"key":        newKey,
+		"created_at": newKey.CreatedAt,
+		"warning":    "Save this key securely. It wont be shown again",
+	})
+}
+
+// Get Request For Admin to list all Api keys
+func (h *Handler) GetApiKeys(c *gin.Context) {
+	keys, err := h.q.ListAPIKeys(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Could not list Api Keys",
+			Error:   err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"Message": "These are the keys",
+		"Keys":    keys,
+	})
 
 }

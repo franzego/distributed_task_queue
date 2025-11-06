@@ -11,11 +11,16 @@ import (
 type Querier interface {
 	CompleteJob(ctx context.Context, id string) error
 	CountJobsByStatus(ctx context.Context, status string) (int64, error)
+	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (ApiKey, error)
 	CreateJob(ctx context.Context, arg CreateJobParams) (Job, error)
+	DeactivateAPIKey(ctx context.Context, id string) error
 	DequeueJob(ctx context.Context) (Job, error)
 	FailJob(ctx context.Context, arg FailJobParams) error
+	GetAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, error)
 	GetJob(ctx context.Context, id string) (Job, error)
+	ListAPIKeys(ctx context.Context) ([]ApiKey, error)
 	ListJobs(ctx context.Context, arg ListJobsParams) ([]Job, error)
+	UpdateLastUsed(ctx context.Context, id string) error
 }
 
 var _ Querier = (*Queries)(nil)
