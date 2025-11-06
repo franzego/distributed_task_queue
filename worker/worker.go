@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -29,12 +30,13 @@ func (w *Worker) WorkerFunction() error {
 	log.Print("Worker has started")
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		cancel()
 		// we dequeue
 		job, err := w.r.DequeueJob(ctx)
-		if err == sql.ErrNoRows {
+		// cancel the context for this iteration immediately after dequeue returns
+		cancel()
+		if errors.Is(err, sql.ErrNoRows) {
 			log.Println("No Available Jobs. Waiting...")
-			time.Sleep(3 * time.Second)
+			time.Sleep(20 * time.Second)
 			continue
 		}
 		if err != nil {
