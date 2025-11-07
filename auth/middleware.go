@@ -60,9 +60,9 @@ func (a *Middleware) AdminAuth() gin.HandlerFunc {
 
 func (a *Middleware) AuthMiddlerWare() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		hash := c.GetHeader("X-API-Key")
+		apiKey := c.GetHeader("X-API-Key")
 
-		if hash == "" {
+		if apiKey == "" {
 			c.JSON(http.StatusUnauthorized, models.ErrorResponse{
 				Message: "Missing API key",
 			})
@@ -70,7 +70,7 @@ func (a *Middleware) AuthMiddlerWare() gin.HandlerFunc {
 			return
 		}
 		// hash the apikey
-		// hash := HashApiKeys(apiKey)
+		hash := HashApiKeys(apiKey)
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		hashKey, err := a.q.GetAPIKeyByHash(ctx, hash)
@@ -91,7 +91,14 @@ func (a *Middleware) AuthMiddlerWare() gin.HandlerFunc {
 		}
 		c.Set("api_key_id", hashKey.ID)
 		c.Set("api_key_name", hashKey.Name)
-		go a.q.UpdateLastUsed(ctx, hashKey.ID)
+		go func() {
+			if err := a.q.UpdateLastUsed(ctx, hashKey.ID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "failed to update time",
+				})
+			}
+		}()
+
 		c.Next()
 
 	}

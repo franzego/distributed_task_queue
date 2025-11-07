@@ -124,7 +124,7 @@ func (h *Handler) PostAdminApiKey(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"id":         newKey.ID,
 		"name":       newKey.Name,
-		"key":        newKey,
+		"key":        key,
 		"created_at": newKey.CreatedAt,
 		"warning":    "Save this key securely. It wont be shown again",
 	})
