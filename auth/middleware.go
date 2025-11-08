@@ -8,20 +8,48 @@ import (
 	"time"
 
 	"github.com/franzego/distributed_task_queue/internal"
+	"github.com/franzego/distributed_task_queue/internal/ratelimit"
 	"github.com/franzego/distributed_task_queue/models"
 	"github.com/gin-gonic/gin"
 )
 
 type Middleware struct {
-	q *internal.Repository
+	q           *internal.Repository
+	rateLimiter *ratelimit.RateLimiter
 }
 
 func NewMiddlewareService(q *internal.Repository) *Middleware {
 	if q == nil {
 		return nil
 	}
+	// Initialize rate limiter with capacity of 100 requests and refill rate of 10 tokens per second
+	rateLimiter := ratelimit.NewRateLimiterService(100, 10)
 	return &Middleware{
-		q: q,
+		q:           q,
+		rateLimiter: rateLimiter,
+	}
+}
+
+// RateLimit middleware applies rate limiting based on client IP
+func (a *Middleware) RateLimit() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		keyID, exists := c.Get("api_key_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+				Message: "Api key does not exist",
+			})
+			c.Abort()
+			return
+		}
+		if !a.rateLimiter.Allow(keyID.(string)) {
+			c.JSON(http.StatusTooManyRequests, models.ErrorResponse{
+				Message: "Rate limit exceeded. Please try again later.",
+			})
+			c.Abort()
+			return
+		}
+		c.Next()
 	}
 }
 

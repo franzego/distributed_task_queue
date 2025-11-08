@@ -53,6 +53,7 @@ func main() {
 	// This is a protected path for jobs endpint
 	api := r.Group("/")
 	api.Use(middlewareAuth.AuthMiddlerWare())
+	api.Use(middlewareAuth.RateLimit())
 	{
 		api.POST("/jobs", handler.PostJob)
 		api.GET("/jobs/:id", handler.GetStatus)
