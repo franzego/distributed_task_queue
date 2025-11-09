@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/resend/resend-go/v3"
 )
@@ -60,9 +61,33 @@ func (e *EmailHandler) Sendemail(ctx context.Context, mail EmailPayload) error {
 	}
 	responseEmail, err := client.Emails.SendWithContext(ctx, params)
 	if err != nil {
-		return fmt.Errorf("an error occurred while sending the mail: %v", err)
+		return ClassifyEmailError(err)
 	}
 	log.Printf("email was sent successfully: id=%s", responseEmail.Id)
 	return nil
 
+}
+
+type RetriableError struct {
+	Msg string
+}
+
+func (e *RetriableError) Error() string {
+	return e.Msg
+}
+
+func ClassifyEmailError(err error) error {
+	msg := err.Error()
+
+	if strings.Contains(msg, "500") ||
+		strings.Contains(msg, "502") ||
+		strings.Contains(msg, "503") ||
+		strings.Contains(msg, "timeout") {
+		return &RetriableError{
+			Msg: fmt.Sprintf("server error: %v", err),
+		}
+	}
+	return &RetriableError{
+		Msg: fmt.Sprintf("unknown error: %v", err),
+	}
 }
