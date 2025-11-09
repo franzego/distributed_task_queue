@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/franzego/distributed_task_queue/internal"
+	"github.com/franzego/distributed_task_queue/internal/handler"
 	"github.com/franzego/distributed_task_queue/worker"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -21,7 +22,8 @@ func main() {
 		return
 	}
 	repository := internal.NewRepositoryService(dbConn)
-	worker := worker.NewWorkerService(repository)
+	emailHandler := handler.NewEmailHandlerService()
+	worker := worker.NewWorkerService(repository, emailHandler)
 	log.Println("Starting worker...")
 	if err := worker.WorkerFunction(); err != nil {
 		log.Fatal(err)

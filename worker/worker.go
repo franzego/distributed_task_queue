@@ -10,19 +10,22 @@ import (
 
 	db "github.com/franzego/distributed_task_queue/db/sqlc"
 	"github.com/franzego/distributed_task_queue/internal"
+	"github.com/franzego/distributed_task_queue/internal/handler"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Worker struct {
 	r *internal.Repository
+	e *handler.EmailHandler
 }
 
-func NewWorkerService(r *internal.Repository) *Worker {
+func NewWorkerService(r *internal.Repository, e *handler.EmailHandler) *Worker {
 	if r == nil {
 		return nil
 	}
 	return &Worker{
 		r: r,
+		e: e,
 	}
 }
 
@@ -58,10 +61,10 @@ func (w *Worker) WorkerFunction() error {
 
 }
 func (w *Worker) ProcessJobs(job db.Job) error {
+	ctx := context.Background()
 	switch job.Type {
 	case "send_email":
-		// handler for email
-		return nil
+		return w.e.HandleMail(ctx, job.Payload)
 	case "logs":
 		// handler for logs
 		return fmt.Errorf("invalid job type: %s", job.Type)
