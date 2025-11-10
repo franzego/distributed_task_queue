@@ -30,7 +30,7 @@ func NewMiddlewareService(q *internal.Repository) *Middleware {
 	}
 }
 
-// RateLimit middleware applies rate limiting based on client IP
+// RateLimit middleware applies rate limiting based on api key
 func (a *Middleware) RateLimit() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
